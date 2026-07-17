@@ -1,0 +1,9 @@
+name = "ctoomajian-golf-pool-api"
+main = "worker/index.js"
+compatibility_date = "2026-07-01"
+
+# After creating the KV namespace (see README), replace YOUR_KV_NAMESPACE_ID
+# with the id Cloudflare gives you.
+kv_namespaces = [
+  { binding = "POOL_KV", id = "YOUR_KV_NAMESPACE_ID" }
+]
