@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { kvGet, kvSet, espnScoreboard, espnSummary } from "./api.js";
+import { kvGet, kvSet, espnScoreboard } from "./api.js";
 import { PASSCODE as SETUP_PASSCODE } from "./constants.js";
 
 const DEFAULT_PICK_COUNT = 15;
@@ -66,34 +66,6 @@ function bestFuzzyMatch(input, candidates) {
   }
   const threshold = Math.max(2, Math.round(norm.length * 0.2));
   return bestDist > 0 && bestDist <= threshold ? best : null;
-}
-
-function findCompetitorArray(node, depth = 0) {
-  if (!node || depth > 8) return null;
-  if (Array.isArray(node)) {
-    if (node.length && node.every((it) => it && typeof it === "object" && "athlete" in it)) {
-      return node;
-    }
-    for (const item of node) {
-      const found = findCompetitorArray(item, depth + 1);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (typeof node === "object") {
-    for (const key of Object.keys(node)) {
-      const found = findCompetitorArray(node[key], depth + 1);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function findEventName(node, depth = 0) {
-  if (!node || depth > 4 || typeof node !== "object") return null;
-  if (typeof node.name === "string" && !Array.isArray(node)) return node.name;
-  if (Array.isArray(node.events) && node.events[0] && node.events[0].name) return node.events[0].name;
-  return null;
 }
 
 function thruFromCompetitor(c) {
@@ -257,36 +229,44 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     setLiveError("");
     setEventOptions([]);
     try {
+      // Always hit the general scoreboard endpoint -- the per-event "summary"
+      // endpoint has proven unreliable (intermittent 502s), same issue found
+      // and fixed in the Sheets version. This endpoint returns every live
+      // PGA Tour event's full leaderboard in one response, so if an event ID
+      // is set, we just filter to that one instead of calling a second,
+      // flakier endpoint.
+      const data = await espnScoreboard();
+      const events = Array.isArray(data.events) ? data.events : [];
+
+      let event;
       if (eventId.trim()) {
-        const data = await espnSummary(eventId.trim());
-        const competitors = findCompetitorArray(data);
-        if (!competitors) throw new Error("Couldn't find a leaderboard for that event ID.");
-        applyCompetitors(competitors, amateurs);
-        const evName = findEventName(data);
-        if (evName && !tournamentName) {
-          setTournamentName(evName);
-          saveTournamentInfo(payouts, eventId, evName);
-        }
-      } else {
-        const data = await espnScoreboard();
-        const events = Array.isArray(data.events) ? data.events : [];
-        if (events.length === 0) {
-          throw new Error("ESPN isn't showing any live PGA Tour event right now.");
-        } else if (events.length > 1) {
-          setEventOptions(events.map((e) => ({ id: e.id, name: e.name })));
-          setLiveError(
-            `${events.length} PGA Tour events are live at once this week -- pick the right one on the Setup tab. Nothing was scored automatically since guessing wrong would silently attribute the wrong tournament's prize money.`
+        event = events.filter((e) => String(e.id) === eventId.trim())[0];
+        if (!event) {
+          const available = events.map((e) => `${e.name} (id: ${e.id})`).join("; ");
+          throw new Error(
+            `Event id ${eventId.trim()} isn't in this week's scoreboard. Currently live: ${available || "nothing"}. Update the event ID on Setup to match.`
           );
-        } else {
-          const competition = events[0].competitions && events[0].competitions[0];
-          const competitors = competition && competition.competitors;
-          if (!competitors) throw new Error("Couldn't find a leaderboard in ESPN's response.");
-          applyCompetitors(competitors, amateurs);
-          if (events[0].name && !tournamentName) {
-            setTournamentName(events[0].name);
-            saveTournamentInfo(payouts, eventId, events[0].name);
-          }
         }
+      } else if (events.length > 1) {
+        setEventOptions(events.map((e) => ({ id: e.id, name: e.name })));
+        setLiveError(
+          `${events.length} PGA Tour events are live at once this week -- pick the right one on the Setup tab. Nothing was scored automatically since guessing wrong would silently attribute the wrong tournament's prize money.`
+        );
+        setLoadingLive(false);
+        return;
+      } else if (events.length === 1) {
+        event = events[0];
+      } else {
+        throw new Error("ESPN isn't showing any live PGA Tour event right now.");
+      }
+
+      const competition = event.competitions && event.competitions[0];
+      const competitors = competition && competition.competitors;
+      if (!competitors) throw new Error(`Could not find a leaderboard for "${event.name}" in ESPN's response.`);
+      applyCompetitors(competitors, amateurs);
+      if (event.name && !tournamentName) {
+        setTournamentName(event.name);
+        saveTournamentInfo(payouts, eventId, event.name);
       }
     } catch (e) {
       setLiveError(`Couldn't load live results (${e.message}). Nothing was substituted, so scores reflect the last successful fetch only.`);
