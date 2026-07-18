@@ -310,6 +310,31 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     } catch {}
   };
 
+  const [removeArmed, setRemoveArmed] = useState(null); // friend name currently awaiting confirm
+
+  const removeFriend = async (name) => {
+    if (removeArmed !== name) {
+      setRemoveArmed(name);
+      setTimeout(() => setRemoveArmed((cur) => (cur === name ? null : cur)), 4000);
+      return;
+    }
+    setRemoveArmed(null);
+    const updated = friends.filter((f) => f !== name);
+    setFriends(updated);
+    const nextPicks = { ...allPicks };
+    delete nextPicks[name];
+    setAllPicks(nextPicks);
+    if (activeFriend === name) setActiveFriend("");
+    try {
+      await kvSet(k("friends"), JSON.stringify(updated));
+      // Best-effort -- there's no delete endpoint on the Worker, so this just
+      // overwrites their picks with blanks rather than truly removing the
+      // key. Harmless: it's no longer in the friends list, so nothing reads
+      // it, but worth knowing it's not a full cleanup.
+      await kvSet(k(`picks:${normalizeName(name)}`), JSON.stringify(Array(pickCount).fill("")));
+    } catch {}
+  };
+
   const savePicks = async () => {
     if (!activeFriend) return;
     const cleaned = picksDraft.map((s) => s.trim());
@@ -755,6 +780,38 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
               />
               <button onClick={applyAmateurs} style={{ marginTop: 10, padding: "10px 18px", borderRadius: 6, border: "1px solid #1B3A2F", background: "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: "pointer" }}>Save amateur list</button>
               {amateurs.length > 0 && <span style={{ marginLeft: 12, fontSize: 13, color: "#5B5641" }}>{amateurs.length} marked</span>}
+            </div>
+
+            <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", marginTop: 0 }}>Manage friends</h3>
+              <p style={{ fontSize: 13, color: "#8A8368" }}>
+                Remove someone who was added by mistake, a duplicate, or dropped out. This deletes their picks too --
+                not just their name.
+              </p>
+              {friends.length === 0 && <p style={{ fontSize: 13, color: "#8A8368" }}>No one's added yet.</p>}
+              {friends.length > 0 && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {friends.map((f) => (
+                    <div key={f} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", borderRadius: 6, border: "1px solid #EFEADA" }}>
+                      <span style={{ fontSize: 14 }}>{f}</span>
+                      <button
+                        onClick={() => removeFriend(f)}
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 6,
+                          border: `1px solid ${removeArmed === f ? "#A32D2D" : "#C9BFA0"}`,
+                          background: removeArmed === f ? "#A32D2D" : "#fff",
+                          color: removeArmed === f ? "#fff" : "#993C1D",
+                          fontSize: 13,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {removeArmed === f ? "Confirm?" : "Remove"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
