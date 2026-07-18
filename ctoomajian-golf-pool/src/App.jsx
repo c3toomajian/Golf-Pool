@@ -170,6 +170,8 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
   const [eventId, setEventId] = useState("");
   const [payoutsText, setPayoutsText] = useState("");
   const [payouts, setPayouts] = useState([]);
+  const [amateursText, setAmateursText] = useState("");
+  const [amateurs, setAmateurs] = useState([]);
   const [liveField, setLiveField] = useState([]);
   const [liveError, setLiveError] = useState("");
   const [loadingLive, setLoadingLive] = useState(false);
@@ -192,6 +194,8 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
         setEventId(info.eventId || "");
         setPayouts(info.payouts || []);
         setPayoutsText((info.payouts || []).join("\n"));
+        setAmateurs(info.amateurs || []);
+        setAmateursText((info.amateurs || []).join("\n"));
         count = info.pickCount || DEFAULT_PICK_COUNT;
         setPickCount(count);
       }
@@ -226,15 +230,14 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     }
   }, [activeFriend, allPicks, pickCount]);
 
-  const applyCompetitors = (competitors) => {
+  const applyCompetitors = (competitors, currentAmateurs) => {
+    const amateurSet = new Set((currentAmateurs || []).map((n) => n.trim().toLowerCase()));
     const parsed = competitors
       .map((c) => {
-        const rawName = (c.athlete && (c.athlete.displayName || c.athlete.fullName)) || "";
-        const isAmateur = /\(a\)\s*$/i.test(rawName.trim());
-        const name = rawName.replace(/\(a\)\s*$/i, "").trim();
+        const name = ((c.athlete && (c.athlete.displayName || c.athlete.fullName)) || "").trim();
         return {
           name,
-          isAmateur,
+          isAmateur: amateurSet.has(name.toLowerCase()),
           scoreNum: parseScoreToNumber(c.score),
           thru: thruFromCompetitor(c),
         };
@@ -243,9 +246,9 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     setLiveField(computeRanks(parsed));
   };
 
-  const saveTournamentInfo = async (nextPayouts, nextEventId = eventId, nextName = tournamentName, nextPickCount = pickCount) => {
+  const saveTournamentInfo = async (nextPayouts, nextEventId = eventId, nextName = tournamentName, nextPickCount = pickCount, nextAmateurs = amateurs) => {
     try {
-      await kvSet(k("tournament-info"), JSON.stringify({ name: nextName, eventId: nextEventId, payouts: nextPayouts, pickCount: nextPickCount }));
+      await kvSet(k("tournament-info"), JSON.stringify({ name: nextName, eventId: nextEventId, payouts: nextPayouts, pickCount: nextPickCount, amateurs: nextAmateurs }));
     } catch {}
   };
 
@@ -258,7 +261,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
         const data = await espnSummary(eventId.trim());
         const competitors = findCompetitorArray(data);
         if (!competitors) throw new Error("Couldn't find a leaderboard for that event ID.");
-        applyCompetitors(competitors);
+        applyCompetitors(competitors, amateurs);
         const evName = findEventName(data);
         if (evName && !tournamentName) {
           setTournamentName(evName);
@@ -278,7 +281,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
           const competition = events[0].competitions && events[0].competitions[0];
           const competitors = competition && competition.competitors;
           if (!competitors) throw new Error("Couldn't find a leaderboard in ESPN's response.");
-          applyCompetitors(competitors);
+          applyCompetitors(competitors, amateurs);
           if (events[0].name && !tournamentName) {
             setTournamentName(events[0].name);
             saveTournamentInfo(payouts, eventId, events[0].name);
@@ -290,7 +293,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     }
     setLoadingLive(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, tournamentName, payouts]);
+  }, [eventId, tournamentName, payouts, amateurs]);
 
   useEffect(() => {
     if (loaded && liveField.length === 0) fetchLive();
@@ -349,6 +352,25 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     }
     setPayouts(parsed);
     saveTournamentInfo(parsed);
+  };
+
+  const applyAmateurs = () => {
+    const parsed = amateursText
+      .split("\n")
+      .map((n) => n.trim())
+      .filter((n) => n);
+    setAmateurs(parsed);
+    saveTournamentInfo(payouts, eventId, tournamentName, pickCount, parsed);
+    // Re-tag the already-fetched field against the new list, rather than
+    // making everyone wait on a fresh ESPN round-trip just to pick this up.
+    if (liveField.length) {
+      const amateurSet = new Set(parsed.map((n) => n.toLowerCase()));
+      setLiveField((prev) =>
+        computeRanks(
+          prev.map((p) => ({ ...p, isAmateur: amateurSet.has(p.name.toLowerCase()) }))
+        )
+      );
+    }
   };
 
   const chooseEvent = (id, name) => {
@@ -709,6 +731,44 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
               />
               <button onClick={applyPayouts} style={{ marginTop: 10, padding: "10px 18px", borderRadius: 6, border: "1px solid #1B3A2F", background: "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: "pointer" }}>Save payout table</button>
               {payouts.length > 0 && <span style={{ marginLeft: 12, fontSize: 13, color: "#5B5641" }}>{payouts.length} positions saved</span>}
+              {payouts.length > 0 && (
+                <details style={{ marginTop: 12 }}>
+                  <summary style={{ cursor: "pointer", fontSize: 13, color: "#5B5641" }}>
+                    Show numbered list (verify positions lined up correctly)
+                  </summary>
+                  <div style={{ marginTop: 8, maxHeight: 240, overflowY: "auto", border: "1px solid #EFEADA", borderRadius: 6 }}>
+                    <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", fontFamily: "'JetBrains Mono', monospace" }}>
+                      <tbody>
+                        {payouts.map((amount, i) => (
+                          <tr key={i} style={{ borderTop: i > 0 ? "1px solid #F1EEE0" : "none" }}>
+                            <td style={{ padding: "4px 10px", color: "#8A8368", width: 50 }}>{i + 1}</td>
+                            <td style={{ padding: "4px 10px", textAlign: "right" }}>{money(amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
+            </div>
+
+            <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", marginTop: 0 }}>Amateurs this week</h3>
+              <p style={{ fontSize: 13, color: "#8A8368" }}>
+                ESPN's data doesn't flag amateur status anywhere -- confirmed by directly inspecting a real amateur's full
+                record during testing, nothing marks it. So this has to be entered manually: one full name per line,
+                matching ESPN's spelling exactly (check the Leaderboard tab after a refresh if you're not sure how they're
+                spelled). Leave blank on weeks with no amateurs in the field -- most weeks, this card does nothing.
+              </p>
+              <textarea
+                value={amateursText}
+                onChange={(e) => setAmateursText(e.target.value)}
+                rows={4}
+                placeholder={"Nevill Ruiter\nMason Howell\n..."}
+                style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #E1DAC4", fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}
+              />
+              <button onClick={applyAmateurs} style={{ marginTop: 10, padding: "10px 18px", borderRadius: 6, border: "1px solid #1B3A2F", background: "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: "pointer" }}>Save amateur list</button>
+              {amateurs.length > 0 && <span style={{ marginLeft: 12, fontSize: 13, color: "#5B5641" }}>{amateurs.length} marked</span>}
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
