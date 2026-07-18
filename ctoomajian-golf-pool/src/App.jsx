@@ -211,6 +211,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
           name,
           isAmateur: amateurSet.has(name.toLowerCase()),
           scoreNum: parseScoreToNumber(c.score),
+          scoreDisplay: c.score != null && c.score !== "" ? String(c.score) : "--",
           thru: thruFromCompetitor(c),
         };
       })
@@ -401,6 +402,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
           total += adjusted;
           return {
             golfer,
+            score: match ? match.scoreDisplay : null,
             rank: match ? match.rank : null,
             tieCount: match ? match.tieCount : 0,
             isAmateurPick,
@@ -598,9 +600,11 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                     <tr style={{ color: "#8A8368", textAlign: "left" }}>
                       <th style={{ padding: "4px 6px" }}>Pick</th>
                       <th style={{ padding: "4px 6px" }}>Golfer</th>
-                      <th style={{ padding: "4px 6px" }}>Finish</th>
+                      <th style={{ padding: "4px 6px" }}>Score</th>
+                      <th style={{ padding: "4px 6px" }}>Position</th>
+                      <th style={{ padding: "4px 6px", textAlign: "right" }}>Prize</th>
                       <th style={{ padding: "4px 6px" }}>Weight</th>
-                      <th style={{ padding: "4px 6px", textAlign: "right" }}>Credit</th>
+                      <th style={{ padding: "4px 6px", textAlign: "right" }}>Adjusted</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -612,7 +616,9 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                           {row.golfer && !row.rank && !row.isAmateurPick && <span style={{ display: "block", fontSize: 11 }}>no match in live field</span>}
                           {row.isAmateurPick && <span style={{ display: "block", fontSize: 11, color: "#854F0B" }}>amateur -- no prize money</span>}
                         </td>
+                        <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{row.score || "--"}</td>
                         <td style={{ padding: "4px 6px" }}>{row.rank ? `${row.tieCount > 1 ? "T" : ""}${row.rank}` : "--"}</td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{money(row.prize)}</td>
                         <td style={{ padding: "4px 6px" }}>{Math.round(row.weight * 100)}%</td>
                         <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{money(row.adjusted)}</td>
                       </tr>
