@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { kvGet, kvSet, espnScoreboard, espnSummary } from "./api.js";
+import { PASSCODE as SETUP_PASSCODE } from "./constants.js";
 
-const SETUP_PASSCODE = "PercivalToots";
 const WEIGHTS = Array.from({ length: 15 }, (_, i) => 1 - i * 0.05); // 1.00 -> 0.30
 
 const money = (n) =>
