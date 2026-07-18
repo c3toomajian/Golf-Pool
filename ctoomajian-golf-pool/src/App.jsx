@@ -521,41 +521,6 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
 
         {loaded && tab === "picks" && (
           <div style={{ marginTop: "2rem" }}>
-            <details style={{ marginBottom: "1.5rem", background: "#fff", border: "1px solid #C9BFA0", borderRadius: 8, padding: "8px 14px" }}>
-              <summary style={{ cursor: "pointer", fontFamily: "'Fraunces', serif", fontSize: 15, padding: "6px 0" }}>Leaderboard</summary>
-              {tournamentLeaderboard.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#8A8368" }}>No live field loaded yet.</p>
-              ) : (
-                <div style={{ overflowX: "auto", marginTop: 8 }}>
-                  <table style={{ width: "100%", minWidth: 400, fontSize: 13, borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ color: "#8A8368", textAlign: "left" }}>
-                        <th style={{ padding: "4px 6px" }}>Position</th>
-                        <th style={{ padding: "4px 6px" }}>Player</th>
-                        <th style={{ padding: "4px 6px" }}>Score</th>
-                        <th style={{ padding: "4px 6px" }}>Thru</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tournamentLeaderboard.map((p, i) => (
-                        <tr key={i} style={{ borderTop: "1px solid #EFEADA" }}>
-                          <td style={{ padding: "4px 6px" }}>
-                            {p.displayRank ? `${p.tieCountDisplay > 1 ? "T" : ""}${p.displayRank}` : "--"}
-                          </td>
-                          <td style={{ padding: "4px 6px" }}>
-                            {p.name}
-                            {p.isAmateur && <span style={{ color: "#854F0B", marginLeft: 6, fontSize: 11 }}>(a)</span>}
-                          </td>
-                          <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{p.scoreDisplay || "--"}</td>
-                          <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{p.thru || "--"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </details>
-
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: "1.5rem" }}>
               <label style={{ fontSize: 14, color: "#5B5641" }}>You are:</label>
               <select
@@ -680,6 +645,41 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                 ))}
               </div>
             )}
+
+            <details style={{ marginBottom: "1.5rem", background: "#fff", border: "1px solid #C9BFA0", borderRadius: 8, padding: "8px 14px" }}>
+              <summary style={{ cursor: "pointer", fontFamily: "'Fraunces', serif", fontSize: 15, padding: "6px 0" }}>Leaderboard</summary>
+              {tournamentLeaderboard.length === 0 ? (
+                <p style={{ fontSize: 13, color: "#8A8368" }}>No live field loaded yet.</p>
+              ) : (
+                <div style={{ overflowX: "auto", marginTop: 8 }}>
+                  <table style={{ width: "100%", minWidth: 400, fontSize: 13, borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ color: "#8A8368", textAlign: "left" }}>
+                        <th style={{ padding: "4px 6px" }}>Position</th>
+                        <th style={{ padding: "4px 6px" }}>Player</th>
+                        <th style={{ padding: "4px 6px" }}>Score</th>
+                        <th style={{ padding: "4px 6px" }}>Thru</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tournamentLeaderboard.map((p, i) => (
+                        <tr key={i} style={{ borderTop: "1px solid #EFEADA" }}>
+                          <td style={{ padding: "4px 6px" }}>
+                            {p.displayRank ? `${p.tieCountDisplay > 1 ? "T" : ""}${p.displayRank}` : "--"}
+                          </td>
+                          <td style={{ padding: "4px 6px" }}>
+                            {p.name}
+                            {p.isAmateur && <span style={{ color: "#854F0B", marginLeft: 6, fontSize: 11 }}>(a)</span>}
+                          </td>
+                          <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{p.scoreDisplay || "--"}</td>
+                          <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{p.thru || "--"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </details>
 
             {results.map((r) => (
               <details key={r.friend} style={{ marginBottom: 10, background: "#fff", border: "1px solid #C9BFA0", borderRadius: 8, padding: "8px 14px" }}>
