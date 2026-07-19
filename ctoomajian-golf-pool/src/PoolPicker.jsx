@@ -100,7 +100,7 @@ export default function PoolPicker({ onOpenPool }) {
         {!adminUnlocked ? (
           <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem", marginBottom: "2rem", maxWidth: 340 }}>
             <h3 style={{ fontFamily: "'Fraunces', serif", marginTop: 0 }}>Start a new pool</h3>
-            <p style={{ fontSize: 13, color: "#8A8368" }}>Only you should be creating new pools -- enter the passcode.</p>
+            <p style={{ fontSize: 13, color: "#8A8368" }}>Passcode required.</p>
             <input
               type="password"
               value={adminInput}
