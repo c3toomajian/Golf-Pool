@@ -28,12 +28,23 @@ export default function Root() {
     setPool({ slug: "", label: "" });
   };
 
-  if (!pool.slug) {
-    return <PoolPicker onOpenPool={openPool} />;
+if (!pool.slug) {
+    return (
+      <>
+        <a href="https://toomajian.org" style={{ display: "block", padding: "12px 16px", fontSize: "14px", textDecoration: "none", color: "inherit", opacity: 0.6 }}>
+          ← toomajian.org
+        </a>
+        <PoolPicker onOpenPool={openPool} />
+      </>
+    );
   }
   return (
-    <PoolGate poolId={pool.slug} poolLabel={pool.label}>
-      <App poolId={pool.slug} poolLabel={pool.label} onLeavePool={leavePool} />
-    </PoolGate>
+    <>
+      <a href="https://toomajian.org" style={{ display: "block", padding: "12px 16px", fontSize: "14px", textDecoration: "none", color: "inherit", opacity: 0.6 }}>
+        ← toomajian.org
+      </a>
+      <PoolGate poolId={pool.slug} poolLabel={pool.label}>
+        <App poolId={pool.slug} poolLabel={pool.label} onLeavePool={leavePool} />
+      </PoolGate>
+    </>
   );
-}
