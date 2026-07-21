@@ -28,7 +28,7 @@ export default function Root() {
     setPool({ slug: "", label: "" });
   };
 
-if (!pool.slug) {
+  if (!pool.slug) {
     return (
       <>
         <a href="https://toomajian.org" style={{ display: "block", padding: "12px 16px", fontSize: "14px", textDecoration: "none", color: "inherit", opacity: 0.6 }}>
@@ -38,6 +38,7 @@ if (!pool.slug) {
       </>
     );
   }
+
   return (
     <>
       <a href="https://toomajian.org" style={{ display: "block", padding: "12px 16px", fontSize: "14px", textDecoration: "none", color: "inherit", opacity: 0.6 }}>
@@ -48,3 +49,4 @@ if (!pool.slug) {
       </PoolGate>
     </>
   );
+}
