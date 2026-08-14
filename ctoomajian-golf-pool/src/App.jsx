@@ -70,9 +70,15 @@ function bestFuzzyMatch(input, candidates) {
 
 function thruFromCompetitor(c) {
   if (!c.linescores || !c.linescores.length) return "-";
-  const lastRound = c.linescores[c.linescores.length - 1];
-  const holes = lastRound.linescores ? lastRound.linescores.length : null;
-  if (holes === null || holes >= 18) return "F";
+  // Rounds that haven't started yet show up as bare placeholder entries
+  // (e.g. just {period: 3}, no hole detail at all) -- confirmed live against
+  // a player mid-round-2 whose round-3 entry was exactly this. Filter those
+  // out, then take the most recent round that's actually started.
+  const startedRounds = c.linescores.filter((r) => r.linescores && r.linescores.length > 0);
+  if (!startedRounds.length) return "-";
+  const current = startedRounds[startedRounds.length - 1];
+  const holes = current.linescores.length;
+  if (holes >= 18) return "F";
   return String(holes);
 }
 
