@@ -138,6 +138,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
   const [picksDraft, setPicksDraft] = useState(Array(DEFAULT_PICK_COUNT).fill(""));
   const [allPicks, setAllPicks] = useState({});
   const [pickCount, setPickCount] = useState(DEFAULT_PICK_COUNT);
+  const [picksLocked, setPicksLocked] = useState(false);
   const [tournamentName, setTournamentName] = useState("");
   const [eventId, setEventId] = useState("");
   const [payoutsText, setPayoutsText] = useState("");
@@ -170,6 +171,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
         setAmateursText((info.amateurs || []).join("\n"));
         count = info.pickCount || DEFAULT_PICK_COUNT;
         setPickCount(count);
+        setPicksLocked(!!info.picksLocked);
       }
 
       const friendsRaw = await kvGet(k("friends"));
@@ -219,10 +221,16 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
     setLiveField(computeRanks(parsed));
   };
 
-  const saveTournamentInfo = async (nextPayouts, nextEventId = eventId, nextName = tournamentName, nextPickCount = pickCount, nextAmateurs = amateurs) => {
+  const saveTournamentInfo = async (nextPayouts, nextEventId = eventId, nextName = tournamentName, nextPickCount = pickCount, nextAmateurs = amateurs, nextPicksLocked = picksLocked) => {
     try {
-      await kvSet(k("tournament-info"), JSON.stringify({ name: nextName, eventId: nextEventId, payouts: nextPayouts, pickCount: nextPickCount, amateurs: nextAmateurs }));
+      await kvSet(k("tournament-info"), JSON.stringify({ name: nextName, eventId: nextEventId, payouts: nextPayouts, pickCount: nextPickCount, amateurs: nextAmateurs, picksLocked: nextPicksLocked }));
     } catch {}
+  };
+
+  const togglePicksLocked = () => {
+    const next = !picksLocked;
+    setPicksLocked(next);
+    saveTournamentInfo(payouts, eventId, tournamentName, pickCount, amateurs, next);
   };
 
   const fetchLive = useCallback(async () => {
@@ -328,6 +336,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
   }, [liveField]);
 
   const addFriend = async () => {
+    if (picksLocked) return;
     const name = newFriend.trim();
     if (!name || friends.includes(name)) return;
     const updated = [...friends, name];
@@ -365,7 +374,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
   };
 
   const savePicks = async () => {
-    if (!activeFriend) return;
+    if (!activeFriend || picksLocked) return;
     const cleaned = picksDraft.map((s) => s.trim());
     const updated = { ...allPicks, [activeFriend]: cleaned };
     setAllPicks(updated);
@@ -537,15 +546,23 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                 placeholder="Add new name"
                 value={newFriend}
                 onChange={(e) => setNewFriend(e.target.value)}
-                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #C9BFA0", fontSize: 14 }}
+                disabled={picksLocked}
+                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #C9BFA0", fontSize: 14, opacity: picksLocked ? 0.5 : 1 }}
               />
               <button
                 onClick={addFriend}
-                style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid #1B3A2F", background: "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: "pointer" }}
+                disabled={picksLocked}
+                style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid #1B3A2F", background: picksLocked ? "#8A8368" : "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: picksLocked ? "default" : "pointer" }}
               >
                 Add
               </button>
             </div>
+
+            {picksLocked && (
+              <div style={{ background: "#FAECE7", border: "1px solid #F0997B", color: "#712B13", padding: 12, borderRadius: 8, fontSize: 13, marginBottom: "1.5rem" }}>
+                Picks are locked for this pool right now -- nobody can add themselves or change picks until it's unlocked on Setup.
+              </div>
+            )}
 
             {activeFriend ? (
               <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
@@ -576,12 +593,13 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                         <input
                           value={val}
                           list="field-names"
+                          disabled={picksLocked}
                           onChange={(e) => {
                             const next = [...picksDraft];
                             next[i] = e.target.value;
                             setPicksDraft(next);
                           }}
-                          style={{ flex: 1, padding: "8px 10px", borderRadius: 6, border: `1px solid ${noMatch || suggestion ? "#EF9F27" : "#E1DAC4"}`, fontSize: 14 }}
+                          style={{ flex: 1, padding: "8px 10px", borderRadius: 6, border: `1px solid ${noMatch || suggestion ? "#EF9F27" : "#E1DAC4"}`, fontSize: 14, opacity: picksLocked ? 0.6 : 1 }}
                         />
                       </div>
                       {suggestion && (
@@ -595,7 +613,13 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                   );
                 })}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: "1rem" }}>
-                  <button onClick={savePicks} style={{ padding: "10px 18px", borderRadius: 6, border: "1px solid #1B3A2F", background: "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: "pointer" }}>Save picks</button>
+                  <button
+                    onClick={savePicks}
+                    disabled={picksLocked}
+                    style={{ padding: "10px 18px", borderRadius: 6, border: "1px solid #1B3A2F", background: picksLocked ? "#8A8368" : "#1B3A2F", color: "#F6F1E4", fontSize: 14, cursor: picksLocked ? "default" : "pointer" }}
+                  >
+                    Save picks
+                  </button>
                   {savedNotice && <span style={{ fontSize: 13, color: "#5B5641" }}>{savedNotice}</span>}
                 </div>
               </div>
@@ -794,6 +818,28 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", marginTop: 0 }}>Lock picks</h3>
+              <p style={{ fontSize: 13, color: "#8A8368" }}>
+                When locked, nobody can add themselves or change any picks -- useful once the tournament actually starts,
+                so no one can sneak a change after seeing early results. Setup stays reachable to you either way.
+              </p>
+              <button
+                onClick={togglePicksLocked}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 6,
+                  border: `1px solid ${picksLocked ? "#993C1D" : "#1B3A2F"}`,
+                  background: picksLocked ? "#993C1D" : "#1B3A2F",
+                  color: "#F6F1E4",
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                {picksLocked ? "Picks are locked -- click to unlock" : "Picks are open -- click to lock"}
+              </button>
             </div>
 
             <div style={{ background: "#fff", border: "1px solid #C9BFA0", borderRadius: 10, padding: "1.5rem" }}>
