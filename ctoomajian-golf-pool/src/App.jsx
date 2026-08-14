@@ -484,6 +484,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
             golfer,
             score: match ? match.scoreDisplay : null,
             today: match ? match.today : null,
+            thru: match ? match.thru : null,
             rank: match ? match.rank : null,
             tieCount: match ? match.tieCount : 0,
             isAmateurPick,
@@ -736,6 +737,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                       <th style={{ padding: "4px 6px" }}>Golfer</th>
                       <th style={{ padding: "4px 6px" }}>Score</th>
                       <th style={{ padding: "4px 6px" }}>Today</th>
+                      <th style={{ padding: "4px 6px" }}>Thru</th>
                       <th style={{ padding: "4px 6px" }}>Position</th>
                       <th style={{ padding: "4px 6px", textAlign: "right" }}>Prize</th>
                       <th style={{ padding: "4px 6px" }}>Weight</th>
@@ -753,6 +755,7 @@ export default function App({ poolId, poolLabel, onLeavePool }) {
                         </td>
                         <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{row.score || "--"}</td>
                         <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{row.today || "--"}</td>
+                        <td style={{ padding: "4px 6px", fontFamily: "'JetBrains Mono', monospace" }}>{row.thru || "--"}</td>
                         <td style={{ padding: "4px 6px" }}>{row.rank ? `${row.tieCount > 1 ? "T" : ""}${row.rank}` : "--"}</td>
                         <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{money(row.prize)}</td>
                         <td style={{ padding: "4px 6px" }}>{Math.round(row.weight * 100)}%</td>
